@@ -32,7 +32,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
         arch: [x64, arm64]
     runs-on: ${{ matrix.os }}
     
@@ -74,6 +74,8 @@ jobs:
             npx electron-builder --win --${{ matrix.arch }} -p never
           elif [ "$RUNNER_OS" == "macOS" ]; then
             npx electron-builder --mac --${{ matrix.arch }} -p never
+          elif [ "$RUNNER_OS" == "Linux" ]; then
+            npx electron-builder --linux --${{ matrix.arch }} -p never
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -81,14 +83,16 @@ jobs:
       - name: Prepare and Zip Artifacts
         shell: pwsh
         run: |
-          $osName = if ("${{ runner.os }}" -eq "Windows") { "win" } else { "mac" }
+          $osName = if ("${{ runner.os }}" -eq "Windows") { "win" } elseif ("${{ runner.os }}" -eq "macOS") { "mac" } else { "linux" }
           $zipName = "${{ env.Project_Name }}-$osName-${{ matrix.arch }}-${{ env.ARTIFACT_NAME }}.zip"
           
           # Find the generated installer in dist folder
           if ("${{ runner.os }}" -eq "Windows") {
             $files = Get-ChildItem -Path dist/*.exe
-          } else {
+          } elseif ("${{ runner.os }}" -eq "macOS") {
             $files = Get-ChildItem -Path dist/*.dmg
+          } else {
+            $files = Get-ChildItem -Path dist/*.deb, dist/*.rpm
           }
           
           if ($files.Count -gt 0) {
